@@ -1,4 +1,4 @@
-🛡️ # Super App Security Kit 🛡️
+🛡️  Super App Security Kit 🛡️
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Framework: NIST CSF](https://img.shields.io/badge/Framework-NIST%20CSF-blueviolet)
@@ -37,6 +37,7 @@ La estructura del kit está alineada con las 5 funciones del **NIST Cybersecurit
 * `🤖 /scripts/` **(DETECTAR):** Scripts de seguridad (SAST, DAST, SCA) listos para integrar en tu *pipeline* de CI/CD.
 * `🔥 /playbooks/` **(RESPONDER):** *Playbooks* básicos de respuesta a incidentes para eventos comunes (ej. fuga de claves).
 * `🧠 /guides/awareness.md` **(TRANSVERSAL):** Material de concientización para todo el equipo (Phishing, Ing. Social).
+
 
 
 

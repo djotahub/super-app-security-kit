@@ -55,9 +55,14 @@ La información será clasificada en tres niveles, basándose en el impacto pote
 1. **Terminación de Empleo:** Al término del empleo (incluyendo contratistas), todo acceso a activos **INTERNOS** y **CONFIDENCIALES** debe ser **revocado inmediatamente** por el equipo de IT/Ciberseguridad.
 2. El proceso de _offboarding_ debe ser formal y documentado.
 
+### 4.4. Retención y Disposición de Activos (A.5.11)
+
+1.  **Retención:** La información clasificada como **CONFIDENCIAL** solo se retendrá por el período estrictamente necesario para cumplir con los requisitos regulatorios y de negocio.
+2.  **Disposición Segura:** Al final de su ciclo de vida o del período de retención, los activos de información **CONFIDENCIALES** deben ser eliminados de forma segura (ej. sobrescritura criptográfica en Cloud, desasociación de claves de cifrado) para asegurar su irrecuperabilidad.
 
 ## 5. CUMPLIMIENTO Y REVISIÓN
 
 El incumplimiento de esta política puede resultar en acciones disciplinarias y, en casos de exposición de datos **CONFIDENCIALES**, en responsabilidades legales y regulatorias.
 
 Esta política será revisada y actualizada por el Propietario anualmente o después de cualquier cambio significativo en el entorno regulatorio (ej. nuevas leyes de PII).
+

@@ -22,6 +22,16 @@ _El riesgo más crítico: verificar que el usuario A no pueda ver/editar datos d
 |  [ ]   | **IDs No Secuenciales:** ¿Se utilizan UUIDs o IDs aleatorios en lugar de IDs autoincrementales (ej. 1, 2, 3) para dificultar la enumeración? |
 |  [ ]   | **Tests de Acceso:** ¿Se han ejecutado pruebas intentando acceder a recursos de otros usuarios con un token válido ajeno?                    |
 
+### Autenticación y Gestión de Sesiones (API2)
+
+_Gestión crítica de tokens comprometidos para Respuesta a Incidentes._
+
+| Estado | Verificación                                                                                                                         |
+| :----: | :----------------------------------------------------------------------------------------------------------------------------------- |
+|  [ ]   | **Protección de Tokens:** ¿Se validan la firma y expiración de los JWT (JSON Web Tokens) en cada petición?                           |
+|  [ ]   | **Mecanismos Estándar:** ¿Se usa `Authorization: Bearer` o cookies seguras en lugar de pasar tokens por URL?                         |
+|  [ ]   | **Revocación de Tokens:** ¿Existe un mecanismo para invalidar tokens JWT comprometidos (blacklist, rotación forzada, o revocación)? |
+
 ### API3: Broken Object Property Level Authorization (Mass Assignment)
 
 _Evitar que se modifiquen campos sensibles (ej. saldo, rol, permisos)._
@@ -46,12 +56,12 @@ _Evitar ataques de denegación de servicio o fuerza bruta._
 
 ## 🛡️ Controles Generales OWASP API
 
-### Autenticación y Gestión de Sesiones (API2)
+### Validación de Datos (General)
 
-| Estado | Verificación                                                                                                 |
-| :----: | :----------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Protección de Tokens:** ¿Se validan la firma y expiración de los JWT (JSON Web Tokens) en cada petición?   |
-|  [ ]   | **Mecanismos Estándar:** ¿Se usa `Authorization: Bearer` o cookies seguras en lugar de pasar tokens por URL? |
+| Estado | Verificación                                                                                                                                                                                               |
+| :----: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  [ ]   | **Validación de Tipo/Largo:** ¿Se valida el tipo de dato y longitud de todos los inputs (strings, números, fechas)?                                                                                        |
+|  [ ]   | **Validación de Lógica de Negocio:** ¿Se aplican validaciones de negocio estrictas (ej. No se puede transferir un monto negativo, la fecha de expiración de una tarjeta es futura)?                        |
 
 ### Broken Function Level Authorization (BFLA - API5)
 

@@ -1,451 +1,74 @@
-# Checklist: Revisión Manual de Código Seguro (Quality Gate)
+# Manual Técnico: Checklist de Revisión Manual de Código Seguro (Quality Gate)
 
-## 📋 Descripción
-Este checklist define el **Quality Gate de seguridad** que debe aplicarse antes de integrar código en CI/CD. Está diseñado para guiar al revisor en la identificación de patrones de código inseguro durante Pull Requests manuales.
+ **Versión:** 1.0 
+ 
+  **Propósito:** Definir el **Quality Gate de seguridad** que debe aplicarse antes de la integración de código (Pull Request). Este instrumento guía la revisión manual para la detección proactiva de fallos de diseño y vulnerabilidades de codificación.
 
-**Objetivo**: Detectar vulnerabilidades comunes antes de que el código llegue a producción.
-
----
+**Base:** OWASP Top 10, OWASP Code Review Guide, Principios de Seguridad de Datos (GDPR/PCI DSS).
 
-## ✅ Validación de Inputs
+## 1. Validación Estricta de Entradas (Input Validation)
 
-### [ ] 1. Sanitización de Entradas de Usuario
-- **¿Qué revisar?**
-  - Todos los datos recibidos desde formularios, APIs, URLs o headers HTTP
-  - Validación tanto en cliente como en servidor (nunca confiar solo en frontend)
+El principio es la **desconfianza absoluta** en cualquier dato originado fuera del perímetro de confianza (Boundary).
 
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Sin validación
-  const userId = req.query.id;
-  db.query(`SELECT * FROM users WHERE id = ${userId}`);
+|ID|Área de Control|Verificación Técnica del Revisor|Nivel de Riesgo|Estado|
+|---|---|---|---|---|
+|**C-1.1**|**Validación de Tipo y Longitud**|¿Todo dato recibido (query params, body JSON, headers) valida estrictamente el tipo (int, float, string) y aplica límites de longitud máxima/mínima?|Alto|[ ]|
+|**C-1.2**|**Lista Blanca (Allowlisting)**|¿El código utiliza la técnica de **lista blanca** para validar _inputs_ (ej. solo "A-Z" o "0-9") en lugar de listas negras (_blocklists_) que son fáciles de evadir?|Alto|[ ]|
+|**C-1.3**|**Canonización del Input**|¿Se realiza la **canonización/normalización** del input antes de la validación para frustrar técnicas de evasión de _waf_ o _encoding_?|Moderado|[ ]|
+|**C-1.4**|**Validación de Lógica de Negocio**|¿Se valida que los valores numéricos o transaccionales cumplan con la lógica de negocio (ej. el monto de transferencia no es negativo, la fecha de expiración de token es futura)?|Crítico|[ ]|
 
-  // ✅ BIEN - Con validación y sanitización
-  const userId = validator.isInt(req.query.id) ? parseInt(req.query.id) : null;
-  if (!userId) throw new Error('Invalid user ID');
-  ```
+## 2. Prevención de Inyección (Injection Prevention)
 
-- **Checklist específico:**
-  - [ ] Se valida tipo de dato (string, int, email, etc.)
-  - [ ] Se valida longitud máxima/mínima
-  - [ ] Se valida formato (regex para emails, URLs, etc.)
-  - [ ] Se rechazan caracteres especiales peligrosos (`<`, `>`, `'`, `"`, `;`, `--`)
-  - [ ] Se usa allowlist en lugar de blocklist cuando sea posible
-
----
+La prevención de inyección debe ser verificada en toda interacción entre el código de la aplicación y la capa de persistencia o el sistema operativo subyacente.
 
-### [ ] 2. Prevención de SQL Injection
+|ID|Área de Control|Verificación Técnica del Revisor|Nivel de Riesgo|Estado|
+|---|---|---|---|---|
+|**C-2.1**|**SQL Injection (Parametrización)**|¿Se utilizan **exclusivamente consultas parametrizadas** (Prepared Statements) para todas las operaciones SQL que involucren _inputs_ de usuario? **La concatenación de** _**strings**_ **para construir SQL está estrictamente prohibida.**|Crítico|[ ]|
+|**C-2.2**|**Comandos del Sistema Operativo**|¿Se utilizan APIs de lenguaje seguras (ej. `subprocess.run` con `shell=False` en Python) en lugar de funciones de ejecución de comandos de _shell_ (`os.system`, `exec()`)?|Alto|[ ]|
+|**C-2.3**|**Validación de Datos en Cláusulas Especiales**|¿Se aplica validación estricta (o _whitelisting_) al usar _inputs_ de usuario en cláusulas SQL no parametrizables como `ORDER BY`, nombres de tablas o nombres de columnas?|Alto|[ ]|
+|**C-2.4**|**Prevención de XSS (Output Encoding)**|¿Se utiliza la codificación de salida (`output encoding`) automática o el _escaping_ contextual (ej. `textContent` en JS, o _frameworks_ como React/Vue) antes de renderizar datos de usuario en HTML?|Alto|[ ]|
 
-- **¿Qué revisar?**
-  - Cualquier consulta SQL que incluya datos del usuario
+## 3. Autorización y Control de Acceso (Authorization Model)
 
-- **Patrones inseguros a detectar:**
-  ```python
-  # ❌ MAL - Concatenación de strings
-  query = f"SELECT * FROM users WHERE email = '{user_email}'"
-  cursor.execute(query)
+La verificación de permisos debe ser estricta en cada capa, siguiendo el principio de **Fail-Safe Defaults**.
 
-  # ✅ BIEN - Consultas parametrizadas
-  query = "SELECT * FROM users WHERE email = %s"
-  cursor.execute(query, (user_email,))
-  ```
+|ID|Área de Control|Verificación Técnica del Revisor|Nivel de Riesgo|Estado|
+|---|---|---|---|---|
+|**C-3.1**|**Broken Object Level Authorization (BOLA)**|¿Se verifica la **propiedad del recurso** (`ownership`) en el lado del servidor para asegurar que el usuario autenticado solo acceda a sus propios datos, frustrando ataques IDOR?|Crítico|[ ]|
+|**C-3.2**|**Broken Function Level Authorization (BFLA)**|¿Se verifica el **rol del usuario (RBAC)** antes de ejecutar cualquier función administrativa o de alto privilegio, incluso si el _endpoint_ está protegido?|Crítico|[ ]|
+|**C-3.3**|**Protección contra Mass Assignment**|¿Los modelos de datos o _requests_ de API utilizan **whitelisting** para ignorar atributos sensibles (ej. `role_id`, `balance`) que podrían ser modificados por un atacante?|Alto|[ ]|
+|**C-3.4**|**Revisión de Flujos Privilegiados**|¿Las funciones que modifican el estado de las cuentas (ej. cambio de contraseña, restablecimiento de fondos) tienen _logging_ robusto y requerimientos de **re-autenticación**?|Alto|[ ]|
 
-- **Checklist específico:**
-  - [ ] Se usan consultas parametrizadas (prepared statements)
-  - [ ] NO se concatenan strings para construir SQL
-  - [ ] Se usa ORM con protección contra SQL injection (ej: SQLAlchemy, Sequelize)
-  - [ ] Se valida input antes de usarlo en `LIKE`, `ORDER BY`, o nombres de tablas
-
----
-
-### [ ] 3. Prevención de XSS (Cross-Site Scripting)
-
-- **¿Qué revisar?**
-  - Cualquier dato del usuario que se renderice en HTML
+## 4. Gestión de Identidad y Sesiones (Authentication)
 
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Inserción directa en DOM
-  document.getElementById('username').innerHTML = userInput;
+La autenticación debe seguir las directrices de **NIST 800-63B** para el manejo de credenciales y tokens.
 
-  // ✅ BIEN - Escapado automático
-  document.getElementById('username').textContent = userInput;
-  // O usar framework con escapado automático (React, Vue)
-  ```
-
-- **Checklist específico:**
-  - [ ] Se usa `textContent` en lugar de `innerHTML` para datos del usuario
-  - [ ] Se escapan caracteres HTML (`<`, `>`, `&`, `"`, `'`)
-  - [ ] Se usa Content Security Policy (CSP) en headers HTTP
-  - [ ] Se valida y sanitiza input en formularios WYSIWYG
-
----
-
-### [ ] 4. Validación de Uploads de Archivos
-
-- **¿Qué revisar?**
-  - Endpoints que permiten subir archivos
-
-- **Patrones inseguros a detectar:**
-  ```php
-  // ❌ MAL - Sin validación de tipo
-  move_uploaded_file($_FILES['file']['tmp_name'], '/uploads/' . $_FILES['file']['name']);
-
-  // ✅ BIEN - Validación estricta
-  $allowed = ['jpg', 'png', 'pdf'];
-  $ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
-  if (!in_array(strtolower($ext), $allowed)) {
-      throw new Exception('Tipo de archivo no permitido');
-  }
-  ```
-
-- **Checklist específico:**
-  - [ ] Se valida extensión del archivo (allowlist)
-  - [ ] Se valida MIME type real (no solo el declarado)
-  - [ ] Se renombra el archivo (no usar nombre original)
-  - [ ] Se limita tamaño máximo de archivo
-  - [ ] Se almacenan archivos fuera del webroot o con permisos restrictivos
+|ID|Área de Control|Verificación Técnica del Revisor|Nivel de Riesgo|Estado|
+|---|---|---|---|---|
+|**C-4.1**|**Almacenamiento de Contraseñas**|¿Se utiliza un algoritmo de _hashing_ lento y con _salt_ (Argon2, Bcrypt) en lugar de _hashes_ rápidos (MD5, SHA-256 simple)?|Crítico|[ ]|
+|**C-4.2**|**Manejo de Tokens JWT**|¿Se valida la **firma criptográfica**, el tiempo de expiración (`exp`) y la audiencia (`aud`) del token JWT en cada solicitud?|Alto|[ ]|
+|**C-4.3**|**Restricción de Sesiones**|¿Los tokens de sesión/JWT tienen un tiempo de vida corto (short-lived) y las sesiones están sujetas a un _timeout_ de inactividad estricto (ej. 15 minutos)?|Moderado|[ ]|
+|**C-4.4**|**Rate Limiting en Login**|¿Existe un mecanismo de _rate limiting_ y bloqueo temporal implementado en todos los _endpoints_ de autenticación para mitigar ataques de fuerza bruta?|Alto|[ ]|
 
----
-
-## 🔐 Autenticación y Autorización
+## 5. Exposición de Información y Logging (Mitigación de GDPR)
 
-### [ ] 5. Manejo Seguro de Contraseñas
-
-- **¿Qué revisar?**
-  - Código que crea, almacena o verifica contraseñas
+El código no debe exponer información sensible al usuario o a logs sin la debida sanitización.
 
-- **Patrones inseguros a detectar:**
-  ```python
-  # ❌ MAL - Hash débil
-  import hashlib
-  password_hash = hashlib.md5(password.encode()).hexdigest()
+|ID|Área de Control|Verificación Técnica del Revisor|Nivel de Riesgo|Estado|
+|---|---|---|---|---|
+|**C-5.1**|**Exposición de Errores**|¿El manejo de excepciones global previene la exposición de _stack traces_, información de la base de datos o mensajes internos al cliente final?|Alto|[ ]|
+|**C-5.2**|**Hardcoded Secrets**|¿El código utiliza variables de entorno o un Gestor de Secretos (Vault/KMS) para todas las claves API, tokens y credenciales de DB? (**Ver Guía S1-T07**).|Crítico|[ ]|
+|**C-5.3**|**Sanitización de Logs**|¿El _logging_ del código en producción está configurado para **enmascarar o evitar** el registro de PII, contraseñas, tokens y CVV en texto plano?|Crítico|[ ]|
+|**C-5.4**|**Headers de Seguridad**|¿El servidor o la aplicación define _headers_ de seguridad cruciales (CSP, HSTS, X-Content-Type-Options) para mitigar ataques en el lado del cliente?|Moderado|[ ]|
 
-  # ✅ BIEN - Bcrypt/Argon2
-  import bcrypt
-  password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-  ```
+## 6. Integración y Criterios de Aprobación
 
-- **Checklist específico:**
-  - [ ] Se usa bcrypt, Argon2, o PBKDF2 (NO MD5, SHA1, o SHA256 simple)
-  - [ ] Se usa salt único por usuario (automático en bcrypt)
-  - [ ] NO se loggean contraseñas en texto plano
-  - [ ] Se implementa rate limiting en login
-  - [ ] Se requiere complejidad mínima de contraseña
+Este checklist se utiliza como el **Quality Gate manual** que complementa las herramientas automáticas (SAST/DAST).
 
----
+|Categoría|Criterio de Decisión|
+|---|---|
+|**APROBACIÓN**|**TODOS** los controles críticos (Nivel Crítico/Alto) han sido verificados. No hay vulnerabilidades de Inyección, Hardcoding o BOLA.|
+|**RECHAZO**|El PR contiene cualquier forma de concatenación SQL con _input_ de usuario, _hardcoded secrets_, o un fallo de autorización (BOLA).|
+|**EXCEPCIÓN**|Los riesgos moderados pueden ser aceptados solo si están documentados formalmente como **Riesgo Residual Aceptado** por el Propietario del Activo.|
 
-### [ ] 6. Gestión de Sesiones y Tokens
-
-- **¿Qué revisar?**
-  - Código que maneja JWT, cookies de sesión, o tokens de API
-
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Token sin expiración
-  const token = jwt.sign({ userId: user.id }, SECRET_KEY);
-
-  // ✅ BIEN - Token con expiración
-  const token = jwt.sign(
-    { userId: user.id },
-    SECRET_KEY,
-    { expiresIn: '1h' }
-  );
-  ```
-
-- **Checklist específico:**
-  - [ ] Los tokens tienen tiempo de expiración
-  - [ ] Se usa `httpOnly` y `secure` en cookies de sesión
-  - [ ] Se implementa refresh token rotation
-  - [ ] Se invalidan tokens al hacer logout
-  - [ ] NO se almacenan tokens en localStorage (usar httpOnly cookies)
-
----
-
-### [ ] 7. Control de Acceso (Authorization)
-
-- **¿Qué revisar?**
-  - Endpoints que requieren permisos específicos
-
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Sin verificación de permisos
-  app.delete('/api/users/:id', (req, res) => {
-    deleteUser(req.params.id);
-  });
-
-  // ✅ BIEN - Verificación de permisos
-  app.delete('/api/users/:id', requireAdmin, (req, res) => {
-    if (req.user.id !== req.params.id && !req.user.isAdmin) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    deleteUser(req.params.id);
-  });
-  ```
-
-- **Checklist específico:**
-  - [ ] Se verifica autorización en CADA endpoint protegido
-  - [ ] Se valida que el usuario solo acceda a SUS propios recursos
-  - [ ] Se implementa RBAC (Role-Based Access Control) o ABAC
-  - [ ] NO se confía en datos del cliente para determinar permisos
-
----
-
-## 🗄️ Seguridad de Bases de Datos
-
-### [ ] 8. Consultas SQL Parametrizadas
-
-- **Checklist específico:**
-  - [ ] NO se usa concatenación de strings en SQL
-  - [ ] Se usan placeholders (`?`, `%s`, `:param`)
-  - [ ] Se valida input antes de usar en `ORDER BY` o nombres de columnas
-  - [ ] Se limita número de resultados (LIMIT) para prevenir DoS
-
----
-
-### [ ] 9. Principio de Mínimo Privilegio en DB
-
-- **¿Qué revisar?**
-  - Configuración de conexión a base de datos
-
-- **Checklist específico:**
-  - [ ] El usuario de DB tiene solo permisos necesarios (no usar `root`)
-  - [ ] Se usan usuarios diferentes para lectura vs escritura
-  - [ ] Se deshabilitan comandos peligrosos (`xp_cmdshell`, `LOAD_FILE`)
-
----
-
-## 🔒 Manejo de Datos Sensibles
-
-### [ ] 10. Exposición de Información Sensible
-
-- **¿Qué revisar?**
-  - Logs, mensajes de error, respuestas de API
-
-- **Patrones inseguros a detectar:**
-  ```python
-  # ❌ MAL - Stack trace en producción
-  except Exception as e:
-      return jsonify({'error': str(e), 'trace': traceback.format_exc()})
-
-  # ✅ BIEN - Mensaje genérico
-  except Exception as e:
-      logger.error(f"Error: {e}", exc_info=True)
-      return jsonify({'error': 'Internal server error'}), 500
-  ```
-
-- **Checklist específico:**
-  - [ ] NO se exponen stack traces en producción
-  - [ ] NO se loggean contraseñas, tokens, o datos de tarjetas
-  - [ ] Los mensajes de error son genéricos para el usuario
-  - [ ] Se usa logging estructurado con niveles apropiados
-  - [ ] Se enmascaran datos sensibles en logs (ej: `****1234` para tarjetas)
-
----
-
-### [ ] 11. Cifrado de Datos Sensibles
-
-- **¿Qué revisar?**
-  - Almacenamiento de datos como PII, tarjetas de crédito, secretos
-
-- **Checklist específico:**
-  - [ ] Datos sensibles se cifran en reposo (AES-256)
-  - [ ] Se usa HTTPS/TLS para datos en tránsito
-  - [ ] Las claves de cifrado NO están hardcodeadas
-  - [ ] Se usa un gestor de secretos (AWS Secrets Manager, Vault)
-
----
-
-## 🌐 Seguridad de APIs
-
-### [ ] 12. Rate Limiting y Throttling
-
-- **¿Qué revisar?**
-  - Endpoints públicos o de autenticación
-
-- **Checklist específico:**
-  - [ ] Se implementa rate limiting por IP
-  - [ ] Se limitan intentos de login (ej: 5 intentos / 15 min)
-  - [ ] Se protegen endpoints de registro/creación de recursos
-
----
-
-### [ ] 13. CORS (Cross-Origin Resource Sharing)
-
-- **¿Qué revisar?**
-  - Configuración de headers CORS
-
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - CORS abierto a todos
-  app.use(cors({ origin: '*' }));
-
-  // ✅ BIEN - CORS restrictivo
-  app.use(cors({
-    origin: 'https://app.example.com',
-    credentials: true
-  }));
-  ```
-
-- **Checklist específico:**
-  - [ ] NO se usa `Access-Control-Allow-Origin: *` en producción
-  - [ ] Se especifican orígenes permitidos explícitamente
-  - [ ] Se valida el header `Origin` en el servidor
-
----
-
-### [ ] 14. Output Encoding en APIs
-
-- **¿Qué revisar?**
-  - Respuestas JSON que incluyen datos del usuario
-
-- **Checklist específico:**
-  - [ ] Se usa `Content-Type: application/json` correcto
-  - [ ] NO se retornan datos sensibles innecesarios (ej: password hash)
-  - [ ] Se filtran campos según permisos del usuario
-
----
-
-## 🛡️ Protección contra Ataques Comunes
-
-### [ ] 15. CSRF (Cross-Site Request Forgery)
-
-- **¿Qué revisar?**
-  - Formularios y endpoints que modifican estado (POST, PUT, DELETE)
-
-- **Checklist específico:**
-  - [ ] Se usan tokens CSRF en formularios
-  - [ ] Se valida header `X-Requested-With` o `Origin`
-  - [ ] Se usa `SameSite=Strict` o `Lax` en cookies
-
----
-
-### [ ] 16. Inyección de Comandos
-
-- **¿Qué revisar?**
-  - Código que ejecuta comandos del sistema operativo
-
-- **Patrones inseguros a detectar:**
-  ```python
-  # ❌ MAL - Inyección de comandos
-  import os
-  os.system(f"ping {user_input}")
-
-  # ✅ BIEN - Usar librerías específicas
-  import subprocess
-  subprocess.run(['ping', '-c', '4', user_input], check=True)
-  ```
-
-- **Checklist específico:**
-  - [ ] NO se usa `eval()`, `exec()`, `system()` con input del usuario
-  - [ ] Se usan librerías específicas en lugar de comandos shell
-  - [ ] Se valida input con allowlist estricta
-
----
-
-### [ ] 17. Path Traversal
-
-- **¿Qué revisar?**
-  - Código que accede a archivos basándose en input del usuario
-
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Path traversal
-  const filePath = `/uploads/${req.query.filename}`;
-  res.sendFile(filePath);
-
-  // ✅ BIEN - Validación de path
-  const path = require('path');
-  const safePath = path.normalize(req.query.filename).replace(/^(\.\.[\/\\])+/, '');
-  const filePath = path.join(__dirname, 'uploads', safePath);
-  ```
-
-- **Checklist específico:**
-  - [ ] Se valida que el path no contenga `../` o `..\`
-  - [ ] Se usa `path.join()` y `path.normalize()`
-  - [ ] Se verifica que el archivo esté dentro del directorio permitido
-
----
-
-## 🔧 Configuración y Dependencias
-
-### [ ] 18. Gestión de Secretos
-
-- **¿Qué revisar?**
-  - Claves API, contraseñas de DB, tokens
-
-- **Patrones inseguros a detectar:**
-  ```javascript
-  // ❌ MAL - Secreto hardcodeado
-  const API_KEY = 'sk_live_1234567890abcdef';
-
-  // ✅ BIEN - Variable de entorno
-  const API_KEY = process.env.API_KEY;
-  if (!API_KEY) throw new Error('API_KEY not configured');
-  ```
-
-- **Checklist específico:**
-  - [ ] NO hay secretos hardcodeados en el código
-  - [ ] Se usan variables de entorno o gestores de secretos
-  - [ ] Los archivos `.env` están en `.gitignore`
-  - [ ] Se rotan secretos periódicamente
-
----
-
-### [ ] 19. Dependencias Vulnerables
-
-- **¿Qué revisar?**
-  - Archivos `package.json`, `requirements.txt`, `pom.xml`
-
-- **Checklist específico:**
-  - [ ] Se ejecuta `npm audit` / `pip-audit` antes del merge
-  - [ ] NO hay dependencias con vulnerabilidades CRITICAL o HIGH
-  - [ ] Se especifican versiones exactas (no `^` o `~` en producción)
-  - [ ] Se revisan dependencias transitivas
-
----
-
-### [ ] 20. Headers de Seguridad HTTP
-
-- **¿Qué revisar?**
-  - Configuración de servidor web o middleware
-
-- **Checklist específico:**
-  - [ ] `Strict-Transport-Security` (HSTS) está configurado
-  - [ ] `X-Content-Type-Options: nosniff` está presente
-  - [ ] `X-Frame-Options: DENY` o `SAMEORIGIN` está configurado
-  - [ ] `Content-Security-Policy` está definido
-  - [ ] NO se expone `X-Powered-By` o `Server`
-
----
-
-## 📊 Criterios de Aprobación
-
-### ✅ El PR puede aprobarse si:
-- [ ] **TODOS** los items críticos (SQL injection, XSS, auth) están verificados
-- [ ] No se detectaron patrones inseguros de alto riesgo
-- [ ] Se documentaron excepciones justificadas (si las hay)
-
-### ❌ El PR debe rechazarse si:
-- [ ] Se detecta concatenación de SQL con input del usuario
-- [ ] Hay secretos hardcodeados en el código
-- [ ] Falta validación de input en endpoints públicos
-- [ ] Se exponen stack traces o datos sensibles en logs
-
----
-
-## 🔗 Referencias
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [OWASP Code Review Guide](https://owasp.org/www-project-code-review-guide/)
-- [CWE Top 25](https://cwe.mitre.org/top25/)
-- [NIST Secure Software Development Framework](https://csrc.nist.gov/projects/ssdf)
-
----
-
-## 📝 Notas para Revisores
-
-1. **Prioriza según contexto**: No todos los items aplican a todos los PRs
-2. **Usa herramientas**: Complementa con SAST (Semgrep, SonarQube) cuando sea posible
-3. **Educa al equipo**: Comparte hallazgos como oportunidades de aprendizaje
-4. **Documenta excepciones**: Si se acepta un riesgo, documentarlo explícitamente
-
+**Auditor (Revisión Final):** **___** **Fecha de Revisión:** **___**

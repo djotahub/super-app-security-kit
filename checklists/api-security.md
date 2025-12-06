@@ -1,92 +1,86 @@
-# Checklist de Auditoría de Seguridad en APIs (OWASP Top 10)
+# Audit Framework: Seguridad en APIs (OWASP API Security Top 10)
 
-**Fecha de Auditoría:** **\*\***\_\_\_**\*\***
-**Auditor:** **\*\***\_\_\_**\*\***
-**API Auditada:** **\*\***\_\_\_**\*\***
-**Tipo:** [ ] RESTful [ ] GraphQL
+ **Versión:** 1.0 
+ 
+ **Base:** OWASP API Security Top 10 (2023) 
+ 
+ **Propósito:** Instrumento de verificación binaria para evaluar el riesgo de la superficie de ataque de las APIs (RESTful/GraphQL) contra fallos de autorización y lógica de negocio.
 
-Este instrumento verifica el cumplimiento de controles de seguridad críticos basados en OWASP API Security Top 10 (2023).
-**Instrucción:** Marque la casilla únicamente si el control se cumple satisfactoriamente.
+**Fecha de Auditoría:** **___** **API Auditada:** **___** **Tipo:** [ ] RESTful [ ] GraphQL
 
----
+## 1. Controles Críticos de Autorización y Fraude (High Risk)
 
-## 🚨 Controles Críticos (Requeridos por Ticket)
+Estos controles son obligatorios para mitigar el riesgo de fraude financiero y exposición de datos PII/KYC.
 
 ### API1: Broken Object Level Authorization (BOLA)
 
-_El riesgo más crítico: verificar que el usuario A no pueda ver/editar datos del usuario B._
+|Estado|Verificación Técnica (Mitigación de Acceso a Recursos Ajeno)|
+|---|---|
+|[ ]|**Validación de Relación:** ¿El servidor valida la propiedad (`ownership`) del recurso (`ID`) contra la identidad del usuario autenticado (token)?|
+|[ ]|**IDs No Secuenciales:** ¿Se utiliza UUIDs, IDs _hash_ o identificadores de alta entropía para prevenir la enumeración predecible de recursos?|
+|[ ]|**Pruebas de Acceso:** ¿Se ha ejecutado testing con tokens válidos ajenos (`IDOR testing`) para verificar la defensa del endpoint?|
 
-| Estado | Verificación                                                                                                                                 |
-| :----: | :------------------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Validación de ID:** ¿El servidor valida que el `ID` del recurso solicitado pertenece al usuario autenticado antes de devolver datos?       |
-|  [ ]   | **IDs No Secuenciales:** ¿Se utilizan UUIDs o IDs aleatorios en lugar de IDs autoincrementales (ej. 1, 2, 3) para dificultar la enumeración? |
-|  [ ]   | **Tests de Acceso:** ¿Se han ejecutado pruebas intentando acceder a recursos de otros usuarios con un token válido ajeno?                    |
+### API2: Broken Authentication (Gestión de Sesiones)
 
-### Autenticación y Gestión de Sesiones (API2)
-
-_Gestión crítica de tokens comprometidos para Respuesta a Incidentes._
-
-| Estado | Verificación                                                                                                                         |
-| :----: | :----------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Protección de Tokens:** ¿Se validan la firma y expiración de los JWT (JSON Web Tokens) en cada petición?                           |
-|  [ ]   | **Mecanismos Estándar:** ¿Se usa `Authorization: Bearer` o cookies seguras en lugar de pasar tokens por URL?                         |
-|  [ ]   | **Revocación de Tokens:** ¿Existe un mecanismo para invalidar tokens JWT comprometidos (blacklist, rotación forzada, o revocación)? |
+|Estado|Verificación Técnica (Manejo de Tokens y Sesiones)|
+|---|---|
+|[ ]|**Validación del JWT:** ¿Se valida la firma, la expiración (`exp`) y el emisor (`iss`) del JSON Web Token en cada petición?|
+|[ ]|**Estándar de Transmisión:** ¿Se emplea el encabezado `Authorization: Bearer` o cookies `HttpOnly` y `Secure`? (Tokens en URL están prohibidos).|
+|[ ]|**Revocación de Tokens:** ¿Existe un mecanismo eficiente (blacklist/lista de revocación) para invalidar tokens comprometidos **antes** de su expiración?|
 
 ### API3: Broken Object Property Level Authorization (Mass Assignment)
 
-_Evitar que se modifiquen campos sensibles (ej. saldo, rol, permisos)._
+|Estado|Verificación Técnica (Protección de Atributos Internos)|
+|---|---|
+|[ ]|**Whitelisting de Inputs:** ¿La capa de la API/servicio ignora o rechaza explícitamente los campos de entrada que no son necesarios para la operación (ej. `role`, `balance`, `is_admin`)?|
+|[ ]|**Inmutabilidad:** ¿Los atributos sensibles de la entidad (ej. datos de cumplimiento) están bloqueados para modificación directa desde cualquier petición del cliente?|
+|[ ]|**Esquemas Rígidos:** ¿Los esquemas de entrada (validadores DTO/Pydantic/GraphQL) están definidos rígidamente para exponer solo los campos escribibles?|
 
-| Estado | Verificación                                                                                                                               |
-| :----: | :----------------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Filtrado de Inputs:** ¿La API ignora o rechaza explícitamente campos de entrada que no espera (whitelisting)?                            |
-|  [ ]   | **Inmutabilidad:** ¿Los campos sensibles (como `is_admin`, `role`, `balance`) están bloqueados para modificación directa desde el cliente? |
-|  [ ]   | **Esquemas Definidos:** (GraphQL/REST) ¿Los esquemas de entrada definen estrictamente qué campos son escribibles?                          |
+## 2. Controles de Resiliencia y Detección (High/Medium Risk)
 
 ### API4: Unrestricted Resource Consumption (Rate Limiting)
 
-_Evitar ataques de denegación de servicio o fuerza bruta._
+|Estado|Verificación Técnica (Prevención de DoS y Fuerza Bruta)|
+|---|---|
+|[ ]|**Límites Globales/Por Usuario:** ¿Existe un límite de peticiones (Rate Limiting) configurado (ej. 100 req/min) aplicado en la capa de Gateway/Load Balancer?|
+|[ ]|**Paginación Forzada:** ¿Los _endpoints_ que devuelven colecciones de datos tienen paginación obligatoria y un límite máximo de resultados por página (`limit` y `offset`)?|
+|[ ]|**Timeouts y Recursos:** ¿Existen tiempos de espera (timeouts) configurados para operaciones pesadas que eviten el bloqueo del hilo de ejecución del servidor?|
 
-| Estado | Verificación                                                                                                                           |
-| :----: | :------------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Límites por Usuario/IP:** ¿Existe un límite de peticiones (Rate Limiting) configurado (ej. 100 req/min) para todos los endpoints?    |
-|  [ ]   | **Paginación Forzada:** ¿Los endpoints que devuelven listas tienen paginación obligatoria y un límite máximo de resultados por página? |
-|  [ ]   | **Timeouts:** ¿Existen tiempos de espera (timeouts) configurados para evitar que operaciones pesadas bloqueen el servidor?             |
+### API5: Broken Function Level Authorization (BFLA)
 
----
+|Estado|Verificación Técnica (Segregación de Privilegios)|
+|---|---|
+|[ ]|**Validación de Rol:** ¿Se verifica el rol del usuario (ej. `Analyst` vs. `Client`) en el servidor para el acceso a cualquier _endpoint_ administrativo o de auditoría?|
+|[ ]|**Separación Lógica:** ¿Las funciones administrativas están separadas lógicamente de las funciones de usuario regular a nivel de código o servicio?|
 
-## 🛡️ Controles Generales OWASP API
+### API7: Server Side Request Forgery (SSRF)
 
-### Validación de Datos (General)
+|Estado|Verificación Técnica (Protección de la Red Interna)|
+|---|---|
+|[ ]|**Filtrado de Inputs de URL:** Si la API acepta una URL como parámetro, ¿se utiliza un mecanismo de validación de lista blanca para asegurar que la URL no apunte a direcciones IP internas (ej. `127.0.0.1`, metadata de Cloud, subredes privadas)?|
 
-| Estado | Verificación                                                                                                                                                                                               |
-| :----: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Validación de Tipo/Largo:** ¿Se valida el tipo de dato y longitud de todos los inputs (strings, números, fechas)?                                                                                        |
-|  [ ]   | **Validación de Lógica de Negocio:** ¿Se aplican validaciones de negocio estrictas (ej. No se puede transferir un monto negativo, la fecha de expiración de una tarjeta es futura)?                        |
+## 3. Controles de Hardening, Logging y Lógica de Negocio (Medium/Bajo Riesgo)
 
-### Broken Function Level Authorization (BFLA - API5)
+### API8: Configuración Insegura
 
-| Estado | Verificación                                                                                                             |
-| :----: | :----------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Roles y Permisos:** ¿Se verifica el rol del usuario (Admin vs. User) en el servidor para cada endpoint administrativo? |
-|  [ ]   | **Separación:** ¿Las funciones administrativas están separadas lógicamente de las funciones de usuario regular?          |
+|Estado|Verificación Técnica|
+|---|---|
+|[ ]|**Política de CORS:** ¿La política de CORS es restrictiva y no utiliza `Access-Control-Allow-Origin: *` en entornos de producción?|
+|[ ]|**Mensajes de Error:** ¿Los mensajes de error son genéricos y evitan filtrar detalles técnicos sensibles (ej. _stack traces_, versiones de lenguaje/framework)?|
+|[ ]|**Forzar HTTPS (HSTS):** ¿El tráfico está forzado a través de TLS/HTTPS, y se utiliza HTTP Strict Transport Security (HSTS) para mitigar _downgrade attacks_?|
 
-### Server Side Request Forgery (SSRF - API7)
+### API10: Logging y Monitoreo (Detección)
 
-| Estado | Verificación                                                                                                                                               |
-| :----: | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Validación de URL:** Si la API acepta una URL como parámetro, ¿se valida que no apunte a direcciones IP internas o locales (ej. 127.0.0.1, 169.254.x.x)? |
+|Estado|Verificación Técnica|
+|---|---|
+|[ ]|**Logs de Transacciones:** ¿Se registran logs inmutables de transacciones sensibles (ej. transferencias de dinero, cambios de contraseña) con marcas de tiempo correctas?|
+|[ ]|**Detección de Fallos de Auth:** ¿Existe un monitoreo configurado para alertar sobre picos inusuales en intentos fallidos de autenticación (fuerza bruta)?|
 
-### Configuración de Seguridad (API8)
+### Lógica de Negocio y Validación
 
-| Estado | Verificación                                                                                                                       |
-| :----: | :--------------------------------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **CORS:** ¿La política de CORS es restrictiva (no usar `*` en producción)?                                                         |
-|  [ ]   | **Mensajes de Error:** ¿Los mensajes de error genéricos evitan filtrar información sensible (stack traces, versiones de software)? |
-|  [ ]   | **HTTPS:** ¿Todo el tráfico de la API está forzado a través de TLS/HTTPS?                                                          |
+|Estado|Verificación Técnica|
+|---|---|
+|[ ]|**Validación de Lógica de Negocio:** ¿Se aplican validaciones de negocio estrictas (ej. No se puede transferir un monto negativo, límites de tiempo en OTPs) para prevenir abusos del flujo?|
+|[ ]|**Validación de Tipo/Formato:** ¿Se valida el tipo de dato y la longitud de todos los _inputs_ (ej. un campo numérico solo acepta números)?|
 
-### Inventario y Gestión (API9)
-
-| Estado | Verificación                                                                                             |
-| :----: | :------------------------------------------------------------------------------------------------------- |
-|  [ ]   | **Documentación:** ¿Existe documentación actualizada (Swagger/OpenAPI) de todos los endpoints expuestos? |
-|  [ ]   | **Entornos:** ¿Los endpoints de prueba o "v1" obsoletos han sido deshabilitados en producción?           |
+**Auditor (Revisión Final):** **___** **Fecha de Revisión:** **___**

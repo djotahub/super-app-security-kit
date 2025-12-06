@@ -1,6 +1,10 @@
 # Playbook: Intento de Inyección SQL (SQLi)
 
-**Clasificación del Incidente:** Intento de Inyección de Código (SQLi) **Severidad Clasificada:** CRÍTICA **Tiempo Objetivo de Respuesta:** $< 10$ minutos (detección y notificación) **Tiempo Objetivo de Contención:** $< 30$ minutos (bloqueo en WAF/Firewall) **Documento Vinculado:** Checklist de Hardening de Bases de Datos (T-16)
+**Clasificación del Incidente:** Intento de Inyección de Código (SQLi) **Severidad Clasificada:** CRÍTICA 
+
+**Tiempo Objetivo de Respuesta:** $< 10$ minutos (detección y notificación) **Tiempo Objetivo de Contención:** $< 30$ minutos (bloqueo en WAF/Firewall) 
+
+**Documento Vinculado:** Checklist de Hardening de Bases de Datos (T-16)
 
 ## 1.0 Protocolo de Respuesta Estratégica (Fase I: Contención)
 

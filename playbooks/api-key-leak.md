@@ -1,6 +1,12 @@
 # Playbook Táctico de IR: Filtración de Claves de API (API Key Leak)
 
-**Clasificación del Incidente:** Exposición de credenciales de alto valor (Claves de AWS, Azure, GCP o tokens de servicios SaaS) **Severidad Clasificada:** CRÍTICA **Tiempo Objetivo de Contención:** $< 10$ minutos (Revocación verificada) **Documentos Vinculados:** Guía de Gestión de Secretos (S1-T07), Política de Gestión de Activos (T-02).
+**Clasificación del Incidente:** Exposición de credenciales de alto valor (Claves de AWS, Azure, GCP o tokens de servicios SaaS) 
+
+**Severidad Clasificada:** CRÍTICA 
+
+**Tiempo Objetivo de Contención:** $< 10$ minutos (Revocación verificada) 
+
+**Documentos Vinculados:** Guía de Gestión de Secretos (S1-T07), Política de Gestión de Activos (T-02).
 
 ## 1.0 Protocolo de Respuesta Estratégica (Fase I: Contención)
 
@@ -71,3 +77,4 @@ _(Esta sección se adjunta como evidencia de cierre del incidente para el report
 - **Hardening:** Guía Hardening de Bases de Datos (T-16) (para la rotación de credenciales DB).
     
 - **Herramientas Forenses:** BFG Repo-Cleaner, `git-filter-repo`
+

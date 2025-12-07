@@ -1,10 +1,10 @@
-# 📘 Guía de Concientización en Ciberseguridad
+#  Guía de Concientización en Ciberseguridad
 
 **"Human Firewall": Protegiendo nuestra organización juntos**
 
 ---
 
-## 📋 Tabla de Contenidos
+##  Tabla de Contenidos
 
 1.  Introducción y Cultura de Seguridad
 2.  Phishing: El arte del engaño masivo
@@ -16,7 +16,7 @@
 
 ---
 
-## 1. Introducción: El "Factor Humano" 🛡️
+## 1. Introducción: El "Factor Humano" 
 
 ### ¿Por qué leer esta guía?
 
@@ -57,7 +57,7 @@ Si pasas el mouse sobre el enlace (sin hacer clic), verás que la dirección no 
 
 ---
 
-## 3. Spear Phishing: El Arpón Dirigido 🎯
+## 3. Spear Phishing: El Arpón Dirigido 
 
 A diferencia del Phishing masivo, el **Spear Phishing** es un ataque personalizado. El atacante ha investigado a su víctima (probablemente usando LinkedIn o redes sociales).
 
@@ -79,7 +79,7 @@ Siempre verifica por un **canal alternativo**.
 
 ---
 
-## 4. Ingeniería Social y Vishing 🎭
+## 4. Ingeniería Social y Vishing 
 
 Los ataques no solo llegan por correo.
 
@@ -90,7 +90,7 @@ Los ataques no solo llegan por correo.
 
 ---
 
-## 5. Tus Llaves Digitales: Contraseñas y MFA 🔐
+## 5. Tus Llaves Digitales: Contraseñas y MFA 
 
 Si el Phishing es el ladrón intentando entrar, tu contraseña es la llave de la puerta.
 
@@ -115,7 +115,7 @@ El MFA es ese código que te llega al celular o a una App (como Google Authentic
 
 ---
 
-## 6. Procedimiento de Reporte Interno 🚨
+## 6. Procedimiento de Reporte Interno 
 
 Detectar el ataque es un éxito. Reportarlo es la victoria.
 
@@ -128,7 +128,7 @@ Detectar el ataque es un éxito. Reportarlo es la victoria.
 ### Paso 2: Reporta
 
 Reenvía el correo sospechoso como archivo adjunto (si es posible) a nuestro equipo de seguridad:
-📧 **[CORREO-DE-SEGURIDAD@TU-EMPRESA.COM]**
+ **[CORREO-DE-SEGURIDAD@TU-EMPRESA.COM]**
 
 ### Paso 3: Verifica y Borra
 
@@ -136,7 +136,7 @@ Si tienes dudas sobre si es real, contacta al remitente por otro medio oficial (
 
 ---
 
-## 7. Glosario para No-Técnicos 📖
+## 7. Glosario para No-Técnicos 
 
 - **Malware:** Cualquier programa malicioso (virus, troyanos) diseñado para dañar tu equipo.
 - **Ransomware:** Un tipo de virus que "secuestra" tus archivos y pide un rescate (dinero) para devolverlos.

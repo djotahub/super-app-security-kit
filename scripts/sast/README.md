@@ -1,146 +1,122 @@
 # SAST Automation Engine: Static Application Security Testing
 
-**Un motor de análisis estático de código de alta fidelidad, diseñado para la detección temprana de vulnerabilidades de seguridad y deuda técnica en el ciclo de vida de desarrollo (SDLC).**
+**Referencia:** T-12
 
-## 1. Arquitectura y Mecanismo de Análisis
+**Herramienta:** [Semgrep](https://semgrep.dev/ "null") (OSS)
 
-El **SAST Automation Engine** no es un simple _linter_ basado en expresiones regulares. Utiliza **Semgrep** como núcleo de análisis, lo que permite una comprensión semántica del código mediante **Árboles de Sintaxis Abstracta (AST)**.
+**Versión Script:** 2.0 (Modern Fintech Ruleset) 
 
-### Diferenciación Técnica (Regex vs. AST)
+**Propósito:** Proveer un mecanismo automatizado para la detección temprana de vulnerabilidades de seguridad, secretos _hardcodeados_ y patrones de diseño inseguros directamente en el código fuente, cumpliendo con el requisito de "Detección Temprana" (Shift-Left).
 
-|Capacidad|Búsqueda Tradicional (Grep/Regex)|SAST Engine (AST)|
-|---|---|---|
-|**Contexto**|Ignorante del contexto. Detecta texto plano.|Comprende variables, flujo de datos y alcance de funciones.|
-|**Precisión**|Alta tasa de Falsos Positivos.|**Alta Fidelidad.** Reduce el ruido al entender la lógica del código.|
-|**Detección**|Solo patrones textuales exactos.|Variaciones semánticas (ej. `x = 1; y = x` es igual a `y = 1`).|
+## 1. Mecanismo de Ejecución y Lógica del Quality Gate
 
-## 2. Inteligencia de Amenazas (Custom Ruleset)
+El script `scan-code.sh` opera como un **Quality Gate de Seguridad** de alta fidelidad en local y bloqueante en CI/CD. Su flujo lógico es:
 
-El motor opera con una configuración de reglas personalizada (`ruleset.yml`) diseñada específicamente para mitigar riesgos en arquitecturas **Fintech**.
-
-### Cobertura de Riesgos Críticos (Mapeo OWASP/CWE)
-
-1. **Gestión de Secretos (CWE-798):**
+1. **Aprovisionamiento Inteligente:** Detecta la ausencia del binario `semgrep` y crea un entorno virtual efímero (`venv`) para la ejecución aislada, evitando conflictos con el sistema operativo.
     
-    - Detección de patrones de alta entropía y prefijos de proveedores (AWS `AKIA`, Stripe `sk_live`).
-        
-    - Validación de entropía para detectar claves privadas RSA/PEM.
-        
-2. **Prevención de Inyección (OWASP A03):**
+2. **Análisis Semántico (AST):** Inspecciona el código fuente utilizando Árboles de Sintaxis Abstracta, lo que permite comprender el flujo de datos y reducir los Falsos Positivos comparado con búsquedas de texto plano.
     
-    - **SQLi:** Identificación de concatenación de cadenas no sanitizadas en drivers de base de datos (Python DB-API, JDBC, Node-PG).
-        
-    - **RCE:** Detección de uso de funciones de ejecución de sistema (`os.system`, `exec`, `eval`) con input no confiable.
-        
-3. **Criptografía y Autenticación (OWASP A02/A07):**
+3. **Inteligencia Personalizada:** Aplica un _Ruleset_ específico (`ruleset.yml`) diseñado para mitigar riesgos Fintech (PCI/GDPR) y OWASP Top 10.
     
-    - Bloqueo de primitivas criptográficas obsoletas (MD5, SHA1, DES).
-        
-    - Detección de generadores de números aleatorios no seguros (`math.random` vs `crypto.random`).
-        
-    - Validación de configuración JWT (algoritmo `None` prohibido).
-        
-
-## 3. Guía de Despliegue y Ejecución
-
-### 3.1. Ejecución Local (Developer Workstation)
-
-Se recomienda la ejecución _pre-commit_ para sanear el código antes de enviarlo al repositorio remoto.
-
-**Requisitos:**
-
-- Python 3.7+
+4. **Generación de Evidencia:** Produce artefactos de auditoría en formato estándar (`JSON`) en el directorio `./reports`.
     
-- `pip`
+5. **Decisión de Bloqueo:** Retorna un código de salida `1` (Error) ante hallazgos de severidad **ERROR**, forzando la detención del _pipeline_ de despliegue.
     
 
-**Comando de Inicialización:** El _wrapper_ `scan-code.sh` gestiona la instalación efímera de dependencias si no se detectan en el sistema.
+## 2. Procedimiento de Validación Local (PoC)
+
+Este procedimiento permite a los desarrolladores sanear su código antes de realizar un _commit_.
+
+### Requisitos del Entorno
+
+- **Python 3.7+** instalado.
+    
+- `pip` (gestor de paquetes).
+    
+- Acceso de lectura al repositorio.
+    
+
+### Cobertura de Riesgos (Ruleset Avanzado)
+
+El motor implementa reglas de alta precisión para arquitecturas modernas (Cloud/Microservicios):
+
+|Categoría|Patrones Detectados|
+|---|---|
+|**Secretos (CWE-798)**|Claves de AWS, Stripe, Slack, Google API y Private Keys (Regex Avanzado).|
+|**Inyección SQL/NoSQL (CWE-89)**|Concatenación insegura en SQL y patrones vulnerables en consultas MongoDB/NoSQL.|
+|**Riesgos Cloud/API (SSRF/XXE)**|Peticiones HTTP con URLs controladas por usuario (SSRF) y parseo XML inseguro (XXE).|
+|**Deserialización (CWE-502)**|Uso peligroso de `pickle`, `yaml.load` o deserializadores que permiten RCE.|
+|**Criptografía (CWE-327)**|Uso de algoritmos obsoletos (MD5, SHA1) y generadores aleatorios débiles.|
+|**Configuración**|Modo `debug=True` en producción y verificación SSL deshabilitada.|
+
+### Ejecución del Escáner
 
 ```
-# Asignar permisos de ejecución
+# 1. Asignar permisos de ejecución
 chmod +x scripts/sast/scan-code.sh
 
-# Ejecutar análisis (Bloqueante ante errores)
+# 2. Iniciar el motor de análisis
 ./scripts/sast/scan-code.sh
-```
-
-### 3.2. Ejecución Dockerizada (Entornos Aislados)
-
-Para entornos donde no se desee instalar Python/Semgrep en el host, utilice la imagen oficial:
 
 ```
-docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
-    semgrep scan --config /src/scripts/sast/ruleset.yml --error
-```
 
-## 4. Integración en Pipeline CI/CD (Quality Gate)
+### Interpretación de Resultados
 
-El motor está diseñado para actuar como un **Quality Gate Bloqueante**. Retorna un código de salida `1` si detecta vulnerabilidades de severidad `ERROR`, deteniendo el despliegue a producción.
-
-### GitHub Actions (Producción)
+En caso de fallo, el sistema desplegará un resumen en consola y la ubicación del reporte JSON:
 
 ```
-name: Security Audit (SAST)
-on: [pull_request, push]
+[ERROR]  FALLO DE SEGURIDAD: Se detectaron 3 vulnerabilidades.
+--- Detalle de Hallazgos ---
+CRITICAL: Deserialización insegura detectada (pickle)...
+   --> vulnerable_code.py:97
 
+```
+
+## 3. Artefactos de Auditoría y Reportes
+
+El motor genera evidencia persistente en la carpeta `reports/` con _timestamps_ únicos para trazabilidad:
+
+- **`sast_report_*.json`**: Formato estructurado conteniendo metadatos de la regla violada (ID, Mensaje, OWASP Category), línea de código afectada y ruta del archivo. Compatible con **DefectDojo** y **SonarQube**.
+    
+
+## 4. Integración en Pipeline CI/CD (GitHub Actions)
+
+Para implementar el control **"Shift-Left"**, incorpore el siguiente _stage_ en el flujo de trabajo (`.github/workflows/pipeline.yml`). Esto garantiza que ningún código vulnerable sea fusionado a la rama principal.
+
+```
 jobs:
-  sast-analysis:
-    name: Semgrep Security Scan
+  sast-quality-gate:
+    name: SAST Security Audit
     runs-on: ubuntu-latest
-    container:
-      image: returntocorp/semgrep
-
     steps:
-      - name: Checkout Code
+      - name: Checkout del Código Fuente
         uses: actions/checkout@v3
 
-      - name: Ejecutar Motor SAST
+      - name: Ejecutar Motor SAST (Semgrep Wrapper)
         run: |
-          semgrep scan \
-            --config ./scripts/sast/ruleset.yml \
-            --json --output sast-report.json \
-            --error \
-            .
-
-      - name: Archivar Evidencia
-        if: always()
+          chmod +x scripts/sast/scan-code.sh
+          ./scripts/sast/scan-code.sh
+        
+      - name: Archivar Evidencia de Auditoría
+        if: always() # Garantizar la subida del reporte incluso en caso de fallo
         uses: actions/upload-artifact@v3
         with:
-          name: sast-audit-report
-          path: sast-report.json
-```
-
-## 5. Gestión de Hallazgos y Excepciones
-
-### 5.1. Interpretación de Reportes
-
-El motor genera evidencia en `./reports/` con formato JSON estándar, compatible con:
-
-- **DefectDojo** (Gestión de Vulnerabilidades).
-    
-- **GitLab Security Dashboard**.
-    
-- **SonarQube** (vía plugin de importación genérico).
-    
-
-### 5.2. Manejo de Falsos Positivos (Triage)
-
-En ingeniería de seguridad, los falsos positivos son inevitables. Para suprimirlos de manera documentada:
-
-**Opción A: Supresión en Código (Recomendada)** Agregue un comentario en la línea afectada explicando la justificación.
+          name: sast-compliance-reports
+          path: reports/
 
 ```
-# nosemgrep: sql-injection-concatenation
-query = "SELECT * FROM fixed_table" # Justificación: Tabla constante, no input de usuario
-```
 
-**Opción B: Ajuste de Reglas** Modifique `scripts/sast/ruleset.yml` para refinar el patrón o excluir rutas específicas (`paths: exclude: ...`).
+## 5. Diagnóstico y Resolución de Incidentes
 
-## 6. Mantenimiento y Soporte
+**Incidente:** `Fallo crítico al instalar dependencias de Semgrep` o errores `PEP 668`.
 
-- **Actualización de Reglas:** El equipo de AppSec revisará trimestralmente el `ruleset.yml` para incorporar nuevos patrones de ataque (Zero-Days).
+- **Causa Raíz:** Restricciones de instalación de paquetes Python a nivel de sistema (común en Kali/Debian 12+).
     
-- **Soporte:** Para reportar reglas rotas o sugerir nuevas detecciones, abra un _Issue_ con la etiqueta `component:sast`.
+- **Resolución:** El script `scan-code.sh` maneja esto automáticamente creando un entorno virtual (`.venv_sast`). Asegúrese de tener instalado `python3-venv`.
     
 
-**Departamento de Seguridad de Producto | Super App Security Kit**
+**Incidente:** Falsos Positivos recurrentes (Bloqueo de código seguro).
+
+- **Causa Raíz:** El motor detecta un patrón que parece vulnerable pero está sanitizado o es intencional.
+    
+- **Resolución:** Aplicar el mecanismo de supresión documentada. Agregue el comentario `# nosemgrep: <rule-id>` en la línea afectada explicando la justificación.
